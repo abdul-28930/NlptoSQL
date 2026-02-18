@@ -1,4 +1,8 @@
-const API_BASE = "http://localhost:8000";
+// Backend base URL is configured via Vite env var.
+// In dev, set VITE_API_BASE=http://localhost:8000
+// In production (e.g. Vercel), set VITE_API_BASE to your public backend URL or Cloudflare tunnel.
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE || (typeof import.meta !== "undefined" ? (import.meta as any).env?.VITE_API_BASE : undefined) || "http://localhost:8000";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
