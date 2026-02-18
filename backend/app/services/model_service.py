@@ -114,6 +114,45 @@ def _extract_sql_from_output(text: str) -> str:
     return sql
 
 
+def _is_plausible_sql(candidate: str) -> bool:
+    """
+    Heuristic check to avoid treating prompt fragments or plain text as SQL.
+    """
+    stripped = candidate.strip()
+    if not stripped:
+        return False
+
+    lowered = stripped.lower()
+
+    # Obvious prompt-echo or meta text – reject.
+    if any(marker in lowered for marker in ("conversation history", "user question:", "return only the sql query")):
+        return False
+
+    # Must contain a SQL keyword like SELECT/WITH.
+    if not re.search(r"\b(select|with)\b", stripped, re.IGNORECASE):
+        return False
+
+    # Require at least one structural SQL keyword to avoid short fragments
+    # like "with SELECT or WITH." being treated as valid.
+    structural_keywords = (
+        " from ",
+        " where ",
+        " join ",
+        " group by ",
+        " order by ",
+        " having ",
+        " limit ",
+        " offset ",
+        " union ",
+        " intersect ",
+        " except ",
+    )
+    if not any(kw in lowered for kw in structural_keywords):
+        return False
+
+    return True
+
+
 def generate_sql(
     nl_query: str,
     schema_text: str,
@@ -139,9 +178,9 @@ def generate_sql(
     sql = _extract_sql_from_output(raw_text)
 
     # If we failed to find a plausible SQL statement (e.g. the model just
-    # echoed the prompt or returned plain text without SELECT/WITH), avoid
-    # sending the entire prompt back to the UI as "SQL".
-    if not re.search(r"\b(select|with)\b", sql, re.IGNORECASE):
+    # echoed the prompt or returned plain text / meta instructions), avoid
+    # sending that back to the UI as "SQL".
+    if not _is_plausible_sql(sql):
         sql = "-- The model did not produce a valid SQL query. Please try rephrasing your question."
 
     explanation = None
