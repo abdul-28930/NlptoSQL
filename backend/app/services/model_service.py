@@ -38,13 +38,11 @@ def _build_prompt(
     system_instruction = (
         "You are an assistant that converts natural language questions "
         "to syntactically correct SQL for the given database schema.\n"
-        "Your ENTIRE response MUST be exactly ONE SQL query and nothing else.\n"
         "Follow these rules strictly:\n"
         "1. Use only the tables and columns that exist in the schema.\n"
         "2. Do not invent columns or tables.\n"
-        "3. Do NOT repeat the schema or the conversation history.\n"
-        "4. Do NOT output natural language, comments, Markdown, or code fences.\n"
-        "5. Output ONLY the SQL statement, starting with SELECT or WITH.\n"
+        "3. Return only a single SQL query.\n"
+        "4. Wrap the SQL in a Markdown ```sql code block.\n"
     )
 
     schema_block = f"SCHEMA:\n{schema_text.strip()}\n\n" if schema_text.strip() else ""
@@ -66,9 +64,8 @@ def _build_prompt(
 
     user_instruction = (
         f"User question: {nl_query}\n\n"
-        "Return only the SQL query. Do not include the word 'SCHEMA', "
-        "do not repeat the conversation history, and do not add any explanation. "
-        "Respond with the SQL query text only."
+        "Return only the SQL query in a ```sql code block. "
+        "Do not add explanations or comments outside the code block."
     )
 
     return f"{system_instruction}\n{schema_block}{history_block}{user_instruction}"
