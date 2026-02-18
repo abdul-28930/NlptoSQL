@@ -230,7 +230,8 @@ Environment configuration (optional; defaults are fine for local dev):
 ```bash
 HF_MODEL_NAME=Qwen/Qwen2.5-0.5B-Instruct
 DATABASE_URL=sqlite:///./nl_to_sql.db
-CORS_ORIGINS=http://localhost:5173
+# Allow both local dev and the deployed Vercel app by default
+CORS_ORIGINS=http://localhost:5173,https://nlpto-sql.vercel.app
 ```
 
 Run the API:

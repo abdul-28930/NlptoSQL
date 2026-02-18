@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     temperature: float = 0.2
     top_p: float = 0.9
 
-    cors_origins: str = "http://localhost:5173"
+    # Comma-separated list of allowed frontend origins for CORS.
+    # Defaults include local dev (Vite) and the deployed Vercel app.
+    cors_origins: str = "http://localhost:5173,https://nlpto-sql.vercel.app"
 
     class Config:
         env_file = ".env"
