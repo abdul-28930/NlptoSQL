@@ -132,22 +132,8 @@ def _is_plausible_sql(candidate: str) -> bool:
     if not re.search(r"\b(select|with)\b", stripped, re.IGNORECASE):
         return False
 
-    # Require at least one structural SQL keyword to avoid short fragments
-    # like "with SELECT or WITH." being treated as valid.
-    structural_keywords = (
-        " from ",
-        " where ",
-        " join ",
-        " group by ",
-        " order by ",
-        " having ",
-        " limit ",
-        " offset ",
-        " union ",
-        " intersect ",
-        " except ",
-    )
-    if not any(kw in lowered for kw in structural_keywords):
+    # Basic length check to avoid tiny fragments like "with SELECT or WITH."
+    if len(stripped) < 20:
         return False
 
     return True
@@ -174,8 +160,15 @@ def generate_sql(
     # text-generation pipeline returns a list of dicts with "generated_text"
     raw_text = outputs[0]["generated_text"]
 
-    # Extract SQL only
-    sql = _extract_sql_from_output(raw_text)
+    # Many HF text-generation models return the full prompt + completion.
+    # Strip off the original prompt so we only parse the model's continuation.
+    if raw_text.startswith(prompt):
+        completion = raw_text[len(prompt) :]
+    else:
+        completion = raw_text
+
+    # Extract SQL only from the completion
+    sql = _extract_sql_from_output(completion)
 
     # If we failed to find a plausible SQL statement (e.g. the model just
     # echoed the prompt or returned plain text / meta instructions), avoid
