@@ -8,8 +8,10 @@ class Settings(BaseSettings):
     # SQLite database file in project root by default
     database_url: str = "sqlite:///./nl_to_sql.db"
 
-    # Hugging Face model configuration (small, local SLM)
-    hf_model_name: str = "Qwen/Qwen2.5-0.5B-Instruct"
+    # Hugging Face model configuration (small, local SLM).
+    # Default to a slightly larger but still CPU-friendly instruction model
+    # for better SQL generation quality.
+    hf_model_name: str = "Qwen/Qwen2.5-1.5B-Instruct"
     max_new_tokens: int = 256
     temperature: float = 0.2
     top_p: float = 0.9

@@ -19,7 +19,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(`Request failed (${res.status}): ${text}`);
   }
 
-  return (await res.json()) as T;
+  // Some endpoints intentionally return 204 No Content (e.g. logout).
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  // Avoid throwing on empty bodies.
+  const text = await res.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
 }
 
 export interface Schema {
