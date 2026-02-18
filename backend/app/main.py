@@ -47,7 +47,8 @@ def bootstrap_user(
             key="user_id",
             value=user_external_id,
             httponly=True,
-            samesite="lax",
+            samesite="none",
+            secure=True,
         )
 
     user = get_or_create_user(db, user_external_id)

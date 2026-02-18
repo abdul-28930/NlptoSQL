@@ -42,7 +42,8 @@ def signup(payload: SignupPayload, response: Response, db: Session = Depends(get
         key="user_id",
         value=user.external_id,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
     )
     return user
 
@@ -64,7 +65,8 @@ def login(payload: LoginPayload, response: Response, db: Session = Depends(get_d
         key="user_id",
         value=external_id,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
     )
     return user
 
