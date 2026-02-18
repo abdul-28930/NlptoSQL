@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply m-0 bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  .app-root {
+    @apply flex h-screen;
+  }
+
+  .sidebar {
+    @apply w-64 border-r border-border p-4 bg-[#020617] overflow-y-auto;
+  }
+
+  .main {
+    @apply flex flex-col flex-1;
+  }
+
+  .header {
+    @apply px-4 py-3 border-b border-border;
+  }
+
+  .header-title {
+    @apply text-base m-0;
+  }
+
+  .loading-text {
+    @apply p-4 text-sm;
+  }
+
+  .error-text {
+    @apply text-red-400 text-xs;
+  }
+
+  .error-text-small {
+    @apply text-red-400 text-xs;
+  }
+
+  .error-banner {
+    @apply text-red-400 text-xs px-4 pb-2;
+  }
+
+  .chat-container {
+    @apply flex flex-col flex-1 p-4 gap-3 overflow-y-auto;
+  }
+
+  .chat-messages {
+    @apply flex-1 overflow-y-auto p-2 rounded border border-border bg-[#020617];
+  }
+
+  .chat-input-container {
+    @apply flex gap-2 px-4 pb-4 pt-3 border-t border-border bg-[#020617];
+  }
+
+  .text-input {
+    @apply flex-1 px-3 py-2 rounded border border-border bg-[#020617] text-foreground text-sm focus:outline-none focus:border-accent;
+  }
+
+  .button {
+    @apply border-none rounded px-3 py-2 text-xs cursor-pointer bg-accent text-accent-foreground font-bold uppercase tracking-tight transition-transform duration-200 hover:scale-105 active:scale-95;
+  }
+
+  .button.secondary {
+    @apply bg-[#111827] text-foreground border border-border hover:scale-105 active:scale-95;
+  }
+
+  .button-fullwidth {
+    @apply w-full;
+  }
+
+  .button-spaced {
+    @apply mb-3;
+  }
+
+  .button:disabled {
+    @apply opacity-60 cursor-default;
+  }
+
+  .session-item {
+    @apply px-2 py-1 text-xs cursor-pointer;
+  }
+
+  .session-item.active {
+    @apply bg-muted;
+  }
+
+  .section-title {
+    @apply text-xs font-semibold tracking-[0.2em] text-muted-foreground mb-2 uppercase;
+  }
+
+  .text-muted {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .text-muted-small {
+    @apply text-[0.7rem] text-muted-foreground;
+  }
+
+  .divider {
+    @apply border-t border-border my-3;
+  }
+
+  .select-input {
+    @apply w-full px-2 py-1 border border-border bg-background text-foreground text-xs;
+  }
+
+  .schema-form {
+    @apply mt-4 flex flex-col gap-2;
+  }
+
+  .schema-form input,
+  .schema-form textarea {
+    @apply w-full px-2 py-1 border border-border bg-background text-foreground text-xs;
+  }
+
+  .schema-form textarea {
+    @apply resize-y min-h-[80px];
+  }
+
+  .message-user {
+    @apply text-foreground;
+  }
+
+  .message-assistant {
+    @apply text-indigo-300;
+  }
+
+  .chat-message-row {
+    @apply mb-2 text-xs;
+  }
+
+  .sql-block {
+    @apply bg-[#020617] rounded border border-border px-2 py-1 font-mono text-[0.75rem] whitespace-pre-wrap;
+  }
+
+  .latest-sql-header {
+    @apply flex items-center justify-between;
+  }
+
+  .latest-sql-label {
+    @apply text-xs;
+  }
+
+  .typing-indicator {
+    @apply inline-flex gap-1;
+  }
+
+  .typing-indicator span {
+    @apply w-1 h-1 rounded-full bg-muted-foreground;
+    animation: typing-bounce 1s infinite ease-in-out;
+  }
+
+  .typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+
+@keyframes typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-0.15rem);
+  }
+}
