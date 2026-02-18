@@ -10,8 +10,10 @@ import {
 import { SchemaForm } from "./components/SchemaForm";
 import { SessionList } from "./components/SessionList";
 import { Chat } from "./components/Chat";
+import { useAuth } from "./hooks/useAuth";
 
 export function AppShell() {
+  const { user, logout } = useAuth();
   const [ready, setReady] = useState(false);
   const [schemas, setSchemas] = useState<Schema[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -77,8 +79,33 @@ export function AppShell() {
       </aside>
       <main className="main">
         <header className="header">
-          <h1 className="header-title">NL to SQL</h1>
-          {error && <div className="error-text">{error}</div>}
+          <div className="flex items-center justify-between">
+            <h1 className="header-title">NL to SQL</h1>
+            <div className="flex items-center gap-3 text-xs">
+              {user ? (
+                <>
+                  <span className="uppercase tracking-[0.15em] text-muted-foreground">
+                    Signed in as
+                  </span>
+                  <span className="text-foreground">{user.email}</span>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => {
+                      logout().catch(() => {
+                        // ignore logout errors for now
+                      });
+                    }}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <span className="text-muted-small">Not signed in</span>
+              )}
+            </div>
+          </div>
+          {error && <div className="error-text mt-1">{error}</div>}
         </header>
         {!ready ? (
           <div className="loading-text">Loading...</div>
