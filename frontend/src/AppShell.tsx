@@ -4,6 +4,7 @@ import {
   createSession,
   listSchemas,
   listSessions,
+  updateSession,
   type Schema,
   type Session,
 } from "./api/client";
@@ -59,8 +60,31 @@ export function AppShell() {
     setActiveSchemaId(schema.id);
   }
 
-  function handleChangeSchema(schemaId: number | null) {
+  async function handleSelectSession(sessionId: number) {
+    setActiveSessionId(sessionId);
+    // Sync schema dropdown to match the selected session's schema_id
+    const selectedSession = sessions.find((s) => s.id === sessionId);
+    if (selectedSession) {
+      setActiveSchemaId(selectedSession.schema_id ?? null);
+    }
+  }
+
+  async function handleChangeSchema(schemaId: number | null) {
     setActiveSchemaId(schemaId);
+    // If there's an active session, update it with the new schema_id
+    if (activeSessionId !== null) {
+      try {
+        const updatedSession = await updateSession(activeSessionId, {
+          schema_id: schemaId ?? undefined,
+        });
+        // Update local sessions state to keep UI consistent
+        setSessions((prev) =>
+          prev.map((s) => (s.id === activeSessionId ? updatedSession : s)),
+        );
+      } catch (err) {
+        setError((err as Error).message);
+      }
+    }
   }
 
   return (
@@ -69,7 +93,7 @@ export function AppShell() {
         <SessionList
           sessions={sessions}
           activeSessionId={activeSessionId}
-          onSelect={setActiveSessionId}
+          onSelect={handleSelectSession}
           onCreate={handleCreateSession}
           schemas={schemas}
           activeSchemaId={activeSchemaId}

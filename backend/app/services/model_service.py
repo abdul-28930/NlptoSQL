@@ -30,11 +30,11 @@ def _get_generator():
     return _generator
 
 
-def _build_prompt(
-    nl_query: str,
-    schema_text: str,
-    history_messages: List[Dict[str, str]],
-) -> str:
+def _build_initial_prompt(nl_query: str, schema_text: str) -> str:
+    """
+    Build a short, focused prompt for initial SQL generation.
+    No conversation history to avoid prompt poisoning.
+    """
     system_instruction = (
         "You are an assistant that converts natural language questions "
         "to syntactically correct SQL for the given database schema.\n"
@@ -45,22 +45,7 @@ def _build_prompt(
         "4. Wrap the SQL in a Markdown ```sql code block.\n"
     )
 
-    schema_block = f"SCHEMA:\n{schema_text.strip()}\n\n" if schema_text.strip() else ""
-
-    history_block_lines: list[str] = []
-    for msg in history_messages:
-        role = msg.get("role", "user")
-        content = msg.get("content", "")
-        if role == "assistant":
-            prefix = "Assistant"
-        elif role == "system":
-            prefix = "System"
-        else:
-            prefix = "User"
-        history_block_lines.append(f"{prefix}: {content}")
-    history_block = ""
-    if history_block_lines:
-        history_block = "Conversation history (last messages):\n" + "\n".join(history_block_lines) + "\n\n"
+    schema_block = f"SCHEMA:\n{schema_text.strip()}\n\n"
 
     user_instruction = (
         f"User question: {nl_query}\n\n"
@@ -68,7 +53,29 @@ def _build_prompt(
         "Do not add explanations or comments outside the code block."
     )
 
-    return f"{system_instruction}\n{schema_block}{history_block}{user_instruction}"
+    return f"{system_instruction}{schema_block}{user_instruction}"
+
+
+def _build_repair_prompt(nl_query: str, schema_text: str, previous_output: str) -> str:
+    """
+    Build a repair prompt when initial generation fails.
+    Includes the previous bad output and asks for a rewrite.
+    """
+    system_instruction = (
+        "You are an assistant that converts natural language questions "
+        "to syntactically correct SQL for the given database schema.\n"
+        "The previous attempt failed. Rewrite it as a single SQL query.\n"
+    )
+
+    schema_block = f"SCHEMA:\n{schema_text.strip()}\n\n"
+
+    repair_instruction = (
+        f"User question: {nl_query}\n\n"
+        f"Previous (incorrect) output:\n{previous_output}\n\n"
+        "Rewrite as a single SQL query in a ```sql code block. Output nothing else."
+    )
+
+    return f"{system_instruction}{schema_block}{repair_instruction}"
 
 
 def _extract_sql_from_output(text: str) -> str:
@@ -139,16 +146,11 @@ def _is_plausible_sql(candidate: str) -> bool:
     return True
 
 
-def generate_sql(
-    nl_query: str,
-    schema_text: str,
-    history_messages: List[Dict[str, str]],
-) -> Tuple[str, str | None, str]:
+def _generate_with_prompt(prompt: str) -> Tuple[str, str]:
     """
-    Call the local Hugging Face small language model to generate SQL.
+    Helper to generate SQL from a prompt and return both completion and raw output.
+    Returns: (completion_text, raw_output_text)
     """
-    prompt = _build_prompt(nl_query=nl_query, schema_text=schema_text, history_messages=history_messages)
-
     generator = _get_generator()
     outputs = generator(
         prompt,
@@ -167,17 +169,53 @@ def generate_sql(
     else:
         completion = raw_text
 
-    # Extract SQL only from the completion
-    sql = _extract_sql_from_output(completion)
+    return completion, raw_text
 
-    # If we failed to find a plausible SQL statement (e.g. the model just
-    # echoed the prompt or returned plain text / meta instructions), avoid
-    # sending that back to the UI as "SQL".
-    if not _is_plausible_sql(sql):
-        sql = "-- The model did not produce a valid SQL query. Please try rephrasing your question."
 
+def generate_sql(
+    nl_query: str,
+    schema_text: str,
+    history_messages: List[Dict[str, str]],
+) -> Tuple[str, str | None, str]:
+    """
+    2-step orchestrator: generate SQL → validate → repair if needed.
+
+    Step 1: Generate SQL with a short, focused prompt (no history to avoid poisoning).
+    Step 2: If validation fails, attempt repair with a second prompt that includes the bad output.
+    """
+    # Step 1: Initial generation with short prompt (no history)
+    initial_prompt = _build_initial_prompt(nl_query=nl_query, schema_text=schema_text)
+    completion_1, raw_output_1 = _generate_with_prompt(initial_prompt)
+    sql_1 = _extract_sql_from_output(completion_1)
+
+    # Validate step 1 output
+    if _is_plausible_sql(sql_1):
+        # Success on first try
+        explanation = None
+        return sql_1, explanation, raw_output_1
+
+    # Step 2: Repair attempt
+    repair_prompt = _build_repair_prompt(
+        nl_query=nl_query,
+        schema_text=schema_text,
+        previous_output=completion_1[:500],  # Limit previous output length
+    )
+    completion_2, raw_output_2 = _generate_with_prompt(repair_prompt)
+    sql_2 = _extract_sql_from_output(completion_2)
+
+    # Validate step 2 output
+    if _is_plausible_sql(sql_2):
+        # Success on repair attempt
+        explanation = None
+        # Combine both raw outputs for debugging (separated by delimiter)
+        combined_raw = f"=== Initial attempt ===\n{raw_output_1}\n\n=== Repair attempt ===\n{raw_output_2}"
+        return sql_2, explanation, combined_raw
+
+    # Both attempts failed
+    sql = "-- The model did not produce a valid SQL query. Please try rephrasing your question."
     explanation = None
-
-    return sql, explanation, raw_text
+    # Combine both raw outputs for debugging
+    combined_raw = f"=== Initial attempt ===\n{raw_output_1}\n\n=== Repair attempt ===\n{raw_output_2}"
+    return sql, explanation, combined_raw
 
 

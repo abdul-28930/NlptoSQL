@@ -53,6 +53,11 @@ class SessionCreate(SessionBase):
     pass
 
 
+class SessionUpdate(BaseModel):
+    title: Optional[str] = None
+    schema_id: Optional[int] = None
+
+
 class SessionOut(SessionBase):
     id: int
     created_at: datetime

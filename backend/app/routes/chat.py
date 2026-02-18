@@ -39,6 +39,29 @@ def create_session(
     return session
 
 
+@router.patch("/sessions/{session_id}", response_model=api_schemas.SessionOut)
+def update_session(
+    session_id: int,
+    payload: api_schemas.SessionUpdate,
+    user_external_id: str | None = Cookie(default=None, alias="user_id"),
+    db: Session = Depends(get_db),
+):
+    """Update a session's title or schema_id."""
+    user = _get_current_user(db, user_external_id)
+    sess = session_service.get_session(db, session_id, user)
+    if not sess:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    if payload.title is not None:
+        sess.title = payload.title
+    if payload.schema_id is not None:
+        sess.schema_id = payload.schema_id
+
+    db.commit()
+    db.refresh(sess)
+    return sess
+
+
 @router.get("/sessions/{session_id}/messages", response_model=List[api_schemas.MessageOut])
 def list_messages(
     session_id: int,
@@ -82,27 +105,28 @@ def send_message(
     if not sess:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
+    # Block generation if no schema is attached
+    if sess.schema is None or not sess.schema.raw_schema.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No schema attached to this session. Please select a schema from the dropdown before asking questions.",
+        )
+
     # Store user message
     session_service.add_message(db, sess, role="user", content=payload.content)
 
-    # Fetch last 5 messages (including new one)
-    history = session_service.get_last_messages(db, sess)
-
-    # Load active schema text if present
-    schema_text = ""
-    if sess.schema is not None:
-        schema_text = sess.schema.raw_schema
+    # Load active schema text (guaranteed to exist due to check above)
+    schema_text = sess.schema.raw_schema
 
     # Lazy import to avoid circular dependency
     from ..services.model_service import generate_sql
 
+    # Note: history_messages parameter kept for backward compatibility but not used
+    # The orchestrator uses short prompts without history to avoid prompt poisoning
     sql, explanation, raw_output = generate_sql(
         nl_query=payload.content,
         schema_text=schema_text,
-        history_messages=[
-            {"role": msg.role, "content": msg.content}
-            for msg in history
-        ],
+        history_messages=[],  # Not used by orchestrator, but kept for API compatibility
     )
 
     # Store assistant message

@@ -123,6 +123,19 @@ export async function createSession(payload: {
   });
 }
 
+export async function updateSession(
+  sessionId: number,
+  payload: {
+    title?: string;
+    schema_id?: number | null;
+  },
+): Promise<Session> {
+  return request<Session>(`/api/sessions/${sessionId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function listMessages(sessionId: number): Promise<Message[]> {
   return request<Message[]>(`/api/sessions/${sessionId}/messages`);
 }
