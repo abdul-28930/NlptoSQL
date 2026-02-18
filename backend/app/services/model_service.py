@@ -137,6 +137,13 @@ def generate_sql(
 
     # Extract SQL only
     sql = _extract_sql_from_output(raw_text)
+
+    # If we failed to find a plausible SQL statement (e.g. the model just
+    # echoed the prompt or returned plain text without SELECT/WITH), avoid
+    # sending the entire prompt back to the UI as "SQL".
+    if not re.search(r"\b(select|with)\b", sql, re.IGNORECASE):
+        sql = "-- The model did not produce a valid SQL query. Please try rephrasing your question."
+
     explanation = None
 
     return sql, explanation, raw_text
